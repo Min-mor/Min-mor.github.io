@@ -1,0 +1,421 @@
+---
+export interface Props {
+  postSlug: string;
+}
+
+const { postSlug } = Astro.props;
+---
+
+<!-- 评论区容器 -->
+<div class="w-full mb-12" data-post-slug={postSlug} id="comments-container">
+  <!-- 引入Font Awesome图标 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- 评论表单 -->
+  <div class="bg-[var(--card-bg)] rounded-[var(--radius-large)] p-6 md:px-9 mb-6 shadow-sm border border-[var(--line-color)]">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+        <i class="fa-solid fa-comments text-[var(--primary)]"></i>
+        评论
+      </h3>
+    </div>
+
+    <form id="comment-form" class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="relative group">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--primary)] transition-colors">
+            <i class="fas fa-user"></i>
+          </div>
+          <input 
+            type="text" 
+            id="nickname" 
+            required 
+            placeholder="昵称 *"
+            class="w-full pl-10 pr-4 py-3 bg-[var(--page-bg)] border-none rounded-xl focus:ring-2 focus:ring-[var(--primary)] transition-all placeholder-gray-400"
+          >
+        </div>
+        <div class="relative group">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--primary)] transition-colors">
+            <i class="fas fa-envelope"></i>
+          </div>
+          <input 
+            type="email" 
+            id="email" 
+            placeholder="邮箱 (可选, 保密)"
+            class="w-full pl-10 pr-4 py-3 bg-[var(--page-bg)] border-none rounded-xl focus:ring-2 focus:ring-[var(--primary)] transition-all placeholder-gray-400"
+          >
+        </div>
+      </div>
+      
+      <div class="relative group">
+        <div class="absolute top-3 left-3 pointer-events-none text-gray-400 group-focus-within:text-[var(--primary)] transition-colors">
+          <i class="fas fa-pen"></i>
+        </div>
+        <textarea 
+          id="content" 
+          required 
+          rows="4" 
+          placeholder="写下你的评论..."
+          class="w-full pl-10 pr-4 py-3 bg-[var(--page-bg)] border-none rounded-xl focus:ring-2 focus:ring-[var(--primary)] transition-all placeholder-gray-400 resize-none"
+        ></textarea>
+      </div>
+      
+      <div class="flex items-center justify-between pt-2">
+        <div class="text-xs text-gray-400 px-1">
+          <i class="fas fa-info-circle mr-1"></i> 评论审核后显示
+        </div>
+        <button 
+          type="submit" 
+          id="submit-btn"
+          class="px-8 py-2.5 bg-[var(--primary)] text-white rounded-xl font-medium shadow-lg shadow-[var(--primary)]/20 hover:shadow-[var(--primary)]/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+        >
+          发布
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 评论列表 -->
+  <div id="comments-list" class="space-y-6">
+    <!-- 加载状态 -->
+    <div class="text-center py-8 text-gray-400 cursor-pointer hover:text-[var(--primary)] transition-colors" onclick="window.location.reload()">
+      <i class="fas fa-circle-notch fa-spin text-2xl mb-2"></i>
+      <p class="text-sm">正在加载评论...</p>
+    </div>
+  </div>
+
+  <!-- 加载更多按钮 -->
+  <div id="load-more-container" class="text-center mt-8 hidden">
+    <button id="load-more-btn" class="px-6 py-2 bg-[var(--card-bg)] border border-[var(--line-color)] rounded-full text-sm text-gray-600 dark:text-gray-400 hover:text-[var(--primary)] hover:border-[var(--primary)] transition-all shadow-sm">
+      查看更多评论
+    </button>
+  </div>
+</div>
+
+<style>
+  /* Smooth Fade In Animation */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out forwards;
+  }
+
+  /* Toast Notification */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 9999;
+    box-shadow: 0 8px 16px -4px rgba(0,0,0,0.1);
+    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1), fadeOut 0.3s ease 2.7s forwards;
+    backdrop-filter: blur(8px);
+  }
+  
+  .toast.error {
+    background: rgba(239, 68, 68, 0.9);
+  }
+  
+  .toast.success {
+    background: rgba(16, 185, 129, 0.9);
+  }
+  
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  
+  @keyframes fadeOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(20px); opacity: 0; }
+  }
+
+  /* Scrollbar for admin panel if needed */
+  #admin-login input::-ms-reveal {
+    display: none;
+  }
+</style>
+
+<script>
+  // 页面加载完成后执行
+  document.addEventListener('DOMContentLoaded', initSupabaseComments);
+
+  // 如果脚本注入时页面已加载，立即尝试初始化
+  if (document.readyState !== 'loading') {
+    setTimeout(initSupabaseComments, 0);
+  }
+
+  // 支持 Swup 和自定义事件的重新初始化
+  document.addEventListener('mizuki:page:loaded', () => setTimeout(initSupabaseComments, 50));
+  if (typeof window !== 'undefined' && window.swup?.hooks) {
+    window.swup.hooks.on('content:replace', () => setTimeout(initSupabaseComments, 50));
+  }
+
+  function initSupabaseComments() {
+    // 防重复初始化：页面销毁重建后重新执行
+    const commentsContainer = document.getElementById('comments-container');
+    if (!commentsContainer || commentsContainer.dataset.supabaseReady === 'true') return;
+    commentsContainer.dataset.supabaseReady = 'true';
+
+    // 检查是否在构建环境中（服务器端渲染）
+    if (typeof window === 'undefined') {
+      return; // 在构建环境中不执行客户端脚本
+    }
+
+    // 检查Supabase配置
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    // 如果缺少必要的环境变量，显示错误信息
+    if (!supabaseUrl || !supabaseAnonKey) {
+      const commentsList = document.getElementById('comments-list');
+      if (commentsList) {
+        commentsList.innerHTML = `
+          <p class="text-gray-500 text-center py-4">
+            评论功能未配置
+          </p>
+        `;
+      }
+      return;
+    }
+
+    // 显示提示消息
+    function showToast(message, isError = true) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${isError ? 'error' : 'success'}`;
+      toast.textContent = message;
+
+      document.body.appendChild(toast);
+      // 3秒后自动移除提示
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // 获取DOM元素
+    const commentsList = document.getElementById('comments-list');
+    const commentForm = document.getElementById('comment-form');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // 全局引用，以便在此作用域外也能调用刷新
+    let loadComments = () => {};
+
+    // 获取当前文章ID
+    const currentPostId = document.getElementById('comments-container')?.dataset.postSlug || '';
+    if (!currentPostId) {
+      if (commentsList) {
+        commentsList.innerHTML = `
+          <p onclick="window.location.reload()" class="text-red-500 refresh-trigger">
+            <i class="fas fa-exclamation-circle mr-1"></i> 未获取到文章信息，点击刷新
+          </p>
+        `;
+      }
+      return;
+    }
+
+    // 加载Supabase并初始化评论功能
+    import('@supabase/supabase-js').then(({ createClient }) => {
+      // 创建Supabase客户端
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+      // 分页状态
+      let currentOffset = 0;
+      const PAGE_SIZE = 5; // 用于测试，每页显示5条
+      const loadMoreContainer = document.getElementById('load-more-container');
+      const loadMoreBtn = document.getElementById('load-more-btn');
+
+      // 绑定加载更多事件
+      if (loadMoreBtn) {
+        // 使用 onclick 避免重复绑定
+        loadMoreBtn.onclick = () => loadComments(true);
+      }
+
+      // 加载评论列表
+      loadComments = async (isLoadMore = false) => {
+        try {
+          // UI状态更新
+          if (!isLoadMore) {
+             currentOffset = 0; // 重置偏移量
+             if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+             // 仅当列表为空或之前失败时才显示加载中，避免刷新时的闪烁
+             if (commentsList && (!commentsList.children.length || commentsList.innerText.includes('加载失败'))) {
+                 commentsList.innerHTML = '<p class="text-gray-500 text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i> 加载中...</p>';
+             }
+          } else {
+             if (loadMoreBtn) {
+                 loadMoreBtn.disabled = true;
+                 loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载中...';
+             }
+          }
+
+          const { data, error } = await supabase
+            .from('comments')
+            .select('*')
+            .eq('post_id', currentPostId)
+            .order('created_at', { ascending: false }) // 按时间倒序（最新的在前）
+            .range(currentOffset, currentOffset + PAGE_SIZE - 1);
+
+          if (error) throw error;
+
+          // 处理完全无数据（非加载更多）
+          if (!isLoadMore && (!data || data.length === 0)) {
+            if (commentsList) {
+              commentsList.innerHTML = '<p class="text-gray-500 text-center py-4">暂无评论，快来发表第一条评论吧～</p>';
+            }
+            return;
+          }
+
+          // 渲染评论列表
+          const commentsHtml = data.map(comment => {
+            const date = new Date(comment.created_at).toLocaleString();
+            const avatarChar = comment.nickname ? comment.nickname.charAt(0).toUpperCase() : '?';
+            // Simple deterministic color generation
+            const colors = ['bg-red-400', 'bg-orange-400', 'bg-amber-400', 'bg-green-400', 'bg-cyan-400', 'bg-blue-400', 'bg-indigo-400', 'bg-violet-400', 'bg-pink-400'];
+            const colorIndex = (comment.nickname || '').charCodeAt(0) % colors.length;
+            const bgClass = colors[colorIndex];
+
+            return `
+            <div class="comment-item group relative bg-[var(--card-bg)] rounded-2xl p-5 mb-4 border border-[var(--line-color)] hover:border-[var(--primary)]/30 hover:shadow-lg hover:shadow-[var(--primary)]/5 transition-all duration-300 animate-fade-in-up">
+              <div class="flex gap-4">
+                <div class="flex-shrink-0">
+                  <div class="w-10 h-10 rounded-xl ${bgClass} text-white flex items-center justify-center font-bold text-lg shadow-sm transform group-hover:scale-105 transition-transform duration-300">
+                    ${avatarChar}
+                  </div>
+                </div>
+                <div class="flex-grow min-w-0">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="font-bold text-gray-800 dark:text-gray-200 text-sm flex items-center gap-2">
+                      ${comment.nickname}
+                      ${comment.isAdmin ? '<span class="px-1.5 py-0.5 rounded text-[10px] bg-[var(--primary)] text-white">ADMIN</span>' : ''}
+                    </span>
+                    <span class="text-xs text-gray-400 font-mono">${date}</span>
+                  </div>
+                  <div class="text-gray-700 dark:text-gray-300 opacity-90 text-sm leading-relaxed whitespace-pre-wrap break-words border-l-2 border-transparent pl-0 group-hover:pl-2 group-hover:border-[var(--primary)]/30 transition-all duration-300">${comment.content}</div>
+                </div>
+              </div>
+            </div>
+          `}).join('');
+
+          if (isLoadMore) {
+             if (commentsList) commentsList.insertAdjacentHTML('beforeend', commentsHtml);
+             if (loadMoreBtn) {
+                 loadMoreBtn.disabled = false;
+                 loadMoreBtn.textContent = '查看更多留言';
+             }
+          } else {
+             if (commentsList) commentsList.innerHTML = commentsHtml;
+          }
+
+          // 更新偏移量
+          currentOffset += data.length;
+
+          // 处理“加载更多”按钮显隐
+          // 如果获取到的数据量少于PAGE_SIZE，说明没有更多了
+          if (data.length < PAGE_SIZE) {
+             if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+          } else {
+             if (loadMoreContainer) loadMoreContainer.classList.remove('hidden');
+          }
+
+        } catch (err) {
+          console.error('加载评论错误:', err);
+          if (!isLoadMore) {
+             if (commentsList) {
+                commentsList.innerHTML = `
+                  <p onclick="window.location.reload()" class="text-red-500 refresh-trigger">
+                    <i class="fas fa-exclamation-circle mr-1"></i> 加载失败，点击刷新
+                  </p>
+                `;
+             }
+          } else {
+             if (loadMoreBtn) {
+                 showToast('加载更多失败，请重试');
+                 loadMoreBtn.disabled = false;
+                 loadMoreBtn.textContent = '查看更多留言';
+             }
+          }
+        }
+      };
+
+      // 首次加载评论
+      loadComments();
+
+      // 评论提交逻辑
+      if (commentForm) {
+        commentForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          // 获取表单数据
+          const nickname = document.getElementById('nickname').value.trim();
+          const email = document.getElementById('email').value.trim();
+          const content = document.getElementById('content').value.trim();
+
+          // 表单验证
+          if (!nickname || !content) {
+            showToast('请填写昵称和评论内容');
+            return;
+          }
+
+          // 防止重复提交
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> 提交中...';
+
+          try {
+            // 提交评论到Supabase
+            const { error } = await supabase
+              .from('comments')
+              .insert([{
+                post_id: currentPostId,
+                nickname,
+                email,
+                content,
+                is_approved: true
+              }]);
+
+            if (error) throw error;
+
+            // 提交成功处理
+            submitBtn.classList.replace('bg-blue-600', 'bg-green-600');
+            submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i> 提交成功！';
+            showToast('评论提交成功', false);
+
+            // 重置表单并刷新评论
+            commentForm.reset();
+            loadComments();
+
+            // 恢复按钮状态
+            setTimeout(() => {
+              submitBtn.classList.replace('bg-green-600', 'bg-blue-600');
+              submitBtn.innerHTML = '提交评论';
+              submitBtn.disabled = false;
+            }, 3000);
+          } catch (err) {
+            showToast(`提交失败: ${err.message}`);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '提交评论';
+          }
+        });
+      }
+    }).catch(err => {
+      console.error('Supabase初始化错误:', err);
+      if (commentsList) {
+        commentsList.innerHTML = `
+          <p onclick="window.location.reload()" class="text-red-500 refresh-trigger">
+            <i class="fas fa-exclamation-circle mr-1"></i> Supabase 初始化失败，点击刷新
+          </p>
+        `;
+      }
+    });
+  }
+</script>

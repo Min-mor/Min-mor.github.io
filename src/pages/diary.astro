@@ -1,0 +1,548 @@
+---
+import I18nKey from "../i18n/i18nKey";
+import { i18n } from "../i18n/translation";
+import MainGridLayout from "../layouts/MainGridLayout.astro";
+import { getCollection } from 'astro:content';
+import { siteConfig } from '../config';
+import { getSingleDiaryHiddenMarker, sanitizeDiaryHiddenMarkers } from "../utils/diary-hidden.js";
+import CryptoJS from "crypto-js";
+
+// 检测是否为外部图片链接
+function isExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return /^https?:$/.test(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
+// 规范化图片字段，兼容 "[text](https://...)" 写法
+function normalizeImage(url: string): string {
+  const match = url.match(/\((https?:[^)]+)\)/);
+  return match ? match[1] : url.trim();
+}
+
+function isImageUrl(url: string): boolean {
+  return /\.(png|jpe?g|gif|webp|avif|svg|bmp)(\?|#|$)/i.test(url);
+}
+
+// 获取实际日记数据并按日期排序
+const diaries = await getCollection('diary')
+  .then(items => items.sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()));
+
+// 默认显示条数（查看更多按钮逐步追加）
+const DIARY_PAGE_SIZE = 10;
+
+// 相对时间格式化函数
+function formatTime(dateInput: string | Date): string {
+  const date = new Date(dateInput);
+  const now = new Date();
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+
+  if (diffInMinutes <= 0) return "刚刚";
+  if (diffInMinutes < 60) return `${diffInMinutes}${i18n(I18nKey.diaryMinutesAgo)}`;
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}${i18n(I18nKey.diaryHoursAgo)}`;
+  return `${Math.floor(diffInMinutes / 1440)}${i18n(I18nKey.diaryDaysAgo)}`;
+}
+
+// 绝对时间格式化函数
+function formatDate(dateInput: string | Date): string {
+  const date = new Date(dateInput);
+  const lang = siteConfig.lang || "zh-CN";
+  const localeMap: Record<string, string> = {
+    "zh_CN": "zh-CN",
+    "zh_TW": "zh-TW",
+    "en": "en-US",
+    "ja": "ja-JP"
+  };
+  const locale = localeMap[lang] || lang;
+
+  const datePart = date.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short'
+  });
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  return `${datePart} ${hh}:${mm}`;
+}
+
+function getDiaryPreviewText(diary: any): string {
+  return sanitizeDiaryHiddenMarkers(diary.data.excerpt || `${diary.body?.slice(0, 200) || ''}...`);
+}
+
+function encryptDiaryPreview(diary: any): string {
+  if (!diary.data.password) return '';
+  return CryptoJS.AES.encrypt(
+    JSON.stringify({
+      __diaryPreview: true,
+      preview: getDiaryPreviewText(diary),
+    }),
+    diary.data.password,
+  ).toString();
+}
+---
+
+<MainGridLayout title={i18n(I18nKey.diary)} description="即刻短文">
+  <div class="flex w-full rounded-[var(--radius-large)] overflow-hidden relative min-h-32">
+    <div class="card-base z-10 px-4 py-4 md:px-6 md:py-5 relative w-full">
+      <div class="relative max-w-4xl">
+        <!-- 页面头部 -->
+        <div class="moments-header mb-6">
+          <div class="header-content">
+            <div class="header-info">
+              <h1 class="moments-title text-xl md:text-2xl lg:text-3xl font-bold text-90 mb-1">{i18n(I18nKey.diary)}</h1>
+              <p class="moments-subtitle text-sm md:text-base lg:text-lg text-75">{i18n(I18nKey.diarySubtitle)}</p>
+            </div>
+            <div class="header-stats">
+              <div class="stat-item text-center">
+                <span class="stat-number text-lg md:text-xl lg:text-2xl font-bold text-[var(--primary)]">{diaries.length}</span>
+                <span class="stat-label text-xs md:text-sm lg:text-base text-75">{i18n(I18nKey.diaryCount)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 短文列表 -->
+        <div class="moments-timeline">
+          <div id="diary-list" class="timeline-list space-y-4">
+            {diaries.map((diary, index) => {
+              const dateObj = new Date(diary.data.date);
+              const dateIso = dateObj.toISOString();
+              const isPasswordProtected = Boolean(diary.data.password);
+              const encryptedPreview = isPasswordProtected ? encryptDiaryPreview(diary) : '';
+              return (
+              <div
+                class="moment-item card-base relative p-4 md:p-6 lg:p-8 hover:shadow-lg transition-all cursor-pointer"
+                data-index={index}
+                data-diary-path={`/diary/${diary.slug}/`}
+                data-diary-password-protected={isPasswordProtected ? "true" : "false"}
+                data-diary-preview={encryptedPreview}
+              >
+                  <a
+                    href={`/diary/${diary.slug}/`}
+                    class="absolute inset-0 z-10 rounded-[var(--radius-large)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--card-bg)]"
+                    aria-label={`打开日记：${diary.data.title || diary.slug}`}
+                  ></a>
+                  <div class="moment-content">
+                    {/* 新增：日记标题（保持原有设计语言） */}
+                    {diary.data.title && (
+                      <h3 class="moment-title text-base md:text-lg lg:text-xl font-semibold text-90 mb-2 md:mb-3 leading-tight">
+                        {diary.data.title}
+                      </h3>
+                    )}
+
+                    {/* 使用excerpt或body内容，并添加安全检查 */}
+                    <p class="moment-text text-sm md:text-base lg:text-lg text-90 leading-relaxed mb-3 md:mb-4 whitespace-pre-wrap" data-diary-lock-message>
+                      {isPasswordProtected ? '🔒此日记受密码保护，需要输入密码才能查看。' : getDiaryPreviewText(diary)}
+                    </p>
+
+                    {/* 处理图片显示 */}
+                    {!isPasswordProtected && diary.data.images && diary.data.images.length > 0 && (() => {
+                      const images = (diary.data.images || []).filter((item) => {
+												const marker = getSingleDiaryHiddenMarker(item);
+												return !marker && isImageUrl(normalizeImage(item));
+											});
+                      const previewImages = images.slice(0, 4);
+                      const remaining = images.length - previewImages.length;
+                      return (
+                        <div class="moment-images relative z-20 grid grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4 mb-3 md:mb-4">
+                          {previewImages.map((image, imageIndex) => {
+                            const normalized = normalizeImage(image);
+                            const external = isExternalUrl(normalized);
+                            const displaySrc = external ? normalized : `/images/diary/${normalized}`;
+                            const showMore = remaining > 0 && imageIndex === previewImages.length - 1;
+                            const diaryHref = `/diary/${diary.slug}/`;
+
+                            if (showMore) {
+                              return (
+                                <a
+                                  href={diaryHref}
+                                  class="image-item relative rounded-md overflow-hidden aspect-square cursor-pointer hover:scale-105 transition-transform block"
+                                  aria-label={i18n(I18nKey.diaryTitle)}
+                                >
+                                  <img
+                                    src={displaySrc}
+                                    alt={i18n(I18nKey.diaryImage)}
+                                    class="w-full h-full object-cover"
+                                    loading="lazy"
+                                    decoding="async"
+                                  />
+                                  <div class="absolute inset-0 bg-black/45 flex items-center justify-center text-white text-lg font-semibold">
+                                    +{remaining + 1}
+                                  </div>
+                                </a>
+                              );
+                            }
+
+                            return (
+                              <a
+                                href={displaySrc}
+                                class="image-item relative rounded-md overflow-hidden aspect-square cursor-pointer hover:scale-105 transition-transform block"
+                                data-lightbox-src={displaySrc}
+                                aria-label={i18n(I18nKey.diaryImage)}
+                              >
+                                <img
+                                  src={displaySrc}
+                                  alt={i18n(I18nKey.diaryImage)}
+                                  class="w-full h-full object-cover"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                                <div class="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none"></div>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
+                    {/* 已实现卡片整块可点击跳转，不再需要单独的“打开日记”按钮 */}
+
+                  </div>
+                
+                <hr class="moment-divider border-t border-[var(--line-divider)] my-3 md:my-4" />
+                
+                <div class="moment-footer flex justify-between items-center">
+                  <div class="moment-time flex items-center gap-2 text-75 text-xs md:text-sm lg:text-base">
+                    <i class="time-icon text-xs md:text-sm">📅</i>
+                    <time datetime={dateIso} class="absolute-date">
+                      {formatDate(dateObj)}
+                    </time>
+                    <span class="relative-date text-xs md:text-sm lg:text-base">| {formatTime(dateObj)}</span>
+                  </div>
+                </div>
+              </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <!-- 查看更多日记按钮 -->
+        <div id="diary-load-more-container" class="text-center mt-8">
+          <button
+            id="diary-load-more"
+            type="button"
+            class="px-6 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-500 transition-all shadow-sm hover:shadow active:scale-95 text-sm font-medium"
+          >
+            查看更多日记
+          </button>
+        </div>
+
+        {/* 底部提示 */}
+        <div class="moments-tips text-center mt-6 md:mt-8 lg:mt-10 text-75 text-xs md:text-sm lg:text-base italic">
+          {i18n(I18nKey.diaryTips)}
+        </div>
+      </div>
+    </div>
+  </div>
+</MainGridLayout>
+
+<script is:inline define:vars={{ PAGE_SIZE: DIARY_PAGE_SIZE }}>
+  // 使用IIFE避免污染全局作用域, 每次页面加载（包括Swup切换）都会执行
+  (function () {
+    const list = document.getElementById('diary-list');
+    const btn = document.getElementById('diary-load-more');
+    const container = document.getElementById('diary-load-more-container');
+    
+    // 如果这些基础元素不存在，说明页面结构不对或不在日记页，直接退出
+    if (!list || !btn || !container) return;
+
+    // 重新获取当前的列表项（确保是当前DOM树中的元素）
+    let items = Array.from(list.querySelectorAll('.moment-item'));
+    let visible = 0;
+
+    function applyVisibility() {
+      // 重新获取items可能是为了应对动态插入的情况，但在当前逻辑下，items是静态初始化的（除非后续有动态加载逻辑）
+      // 这里保持使用闭包内的 items
+      items.forEach((el, idx) => {
+        el.style.display = idx < visible ? '' : 'none';
+      });
+
+      if (visible >= items.length) {
+        container.style.display = 'none';
+      } else {
+        container.style.display = '';
+      }
+    }
+
+    function showMore() {
+      visible = Math.min(items.length, visible + PAGE_SIZE);
+      applyVisibility();
+    }
+
+    // 初始化：显示初始数量
+    visible = Math.min(items.length, PAGE_SIZE);
+    applyVisibility();
+
+    // 绑定点击事件 - 因为btn是当前页面的新元素，直接绑定即可，无需担心解绑
+    btn.addEventListener('click', showMore);
+  })();
+</script>
+
+<script is:inline>
+  (function () {
+    const list = document.getElementById('diary-list');
+    if (!list) return;
+
+    let cryptoLoadingPromise = null;
+
+    function normalizeDiaryPath(path) {
+      const normalized = String(path || '').replace(/\/+$/, '/') || '/';
+      try {
+        return decodeURI(normalized);
+      } catch (_) {
+        return normalized;
+      }
+    }
+
+    function storageCandidates(path) {
+      const normalized = normalizeDiaryPath(path);
+      const encoded = encodeURI(normalized);
+      return Array.from(new Set([normalized, encoded]));
+    }
+
+    function getStoredValue(prefix, path) {
+      for (const candidate of storageCandidates(path)) {
+        const value = localStorage.getItem(`${prefix}${candidate}`);
+        if (value) return value;
+      }
+      return '';
+    }
+
+    function removeStoredValues(prefix, path) {
+      storageCandidates(path).forEach((candidate) => localStorage.removeItem(`${prefix}${candidate}`));
+    }
+
+    function loadCryptoJs() {
+      if (typeof CryptoJS !== 'undefined') return Promise.resolve();
+      if (cryptoLoadingPromise) return cryptoLoadingPromise;
+      cryptoLoadingPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = '/assets/js/crypto-js.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      return cryptoLoadingPromise;
+    }
+
+    async function decryptDiaryPreview(card, password) {
+      const encryptedPreview = card.getAttribute('data-diary-preview') || '';
+      if (!encryptedPreview || !password) return '';
+      await loadCryptoJs();
+      const decrypted = CryptoJS.AES.decrypt(encryptedPreview, password).toString(CryptoJS.enc.Utf8);
+      if (!decrypted) return '';
+      const payload = JSON.parse(decrypted);
+      if (!payload || payload.__diaryPreview !== true) return '';
+      return String(payload.preview || '').trim();
+    }
+
+    async function applyUnlockedStatus() {
+      const cards = Array.from(list.querySelectorAll('.moment-item[data-diary-password-protected="true"]'));
+      await Promise.all(cards.map(async (card) => {
+        const path = card.getAttribute('data-diary-path') || '';
+        const unlocked = getStoredValue('diary-unlocked-', path) === 'true';
+        const password = getStoredValue('diary-password-', path);
+        const message = card.querySelector('[data-diary-lock-message]');
+        if (!message) return;
+        if (!unlocked || !password) {
+          message.textContent = '🔒此日记受密码保护，需要输入密码才能查看。';
+          return;
+        }
+
+        try {
+          const preview = await decryptDiaryPreview(card, password);
+          message.textContent = preview
+            ? `[加密日记-已解锁🔓]${preview}`
+            : '加密日记，已解锁🔓';
+        } catch (_) {
+          message.textContent = '🔒此日记受密码保护，需要输入密码才能查看。';
+          removeStoredValues('diary-unlocked-', path);
+          removeStoredValues('diary-password-', path);
+        }
+      }));
+    }
+
+    applyUnlockedStatus();
+    window.addEventListener('storage', applyUnlockedStatus);
+    window.addEventListener('diary-password-unlocked', applyUnlockedStatus);
+    document.addEventListener('astro:page-load', applyUnlockedStatus);
+    document.addEventListener('swup:contentReplaced', applyUnlockedStatus);
+  })();
+</script>
+
+<style>
+  /* 保留原始所有样式 */
+  .card-base {
+    background: var(--card-bg);
+    border: 1px solid var(--line-divider);
+    transition: all 0.3s ease;
+  }
+  
+  .moments-header {
+    padding: 1rem;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark, var(--primary)) 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .moments-title {
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .moments-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .stat-number {
+    color: white;
+  }
+  
+  .stat-label {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .image-item img {
+    transition: transform 0.3s ease;
+  }
+  
+  .image-item:hover img {
+    transform: scale(1.05);
+  }
+  
+  .action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+  }
+  
+  .action-btn:hover {
+    color: var(--primary);
+  }
+
+  /* 新增标题样式（与现有风格统一） */
+  .moment-title {
+    color: var(--text-primary);
+    font-family: inherit;
+    transition: color 0.3s ease;
+  }
+  
+  /* 响应式设计 */
+  @media (max-width: 640px) {
+    .moments-header {
+      padding: 0.75rem;
+    }
+    
+    .header-content {
+      flex-direction: column;
+      text-align: center;
+      gap: 0.75rem;
+    }
+    
+    .moment-images {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .moment-footer {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .moment-title {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+  }
+  
+  @media (min-width: 641px) and (max-width: 900px) {
+    .moments-header {
+      padding: 1.25rem;
+    }
+    
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .moment-item {
+      padding: 1.5rem;
+    }
+    
+    .moment-images {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+      max-width: none;
+    }
+    
+    .moment-text {
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+
+    .moment-title {
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .moment-footer {
+      margin-top: 1rem;
+    }
+  }
+  
+  @media (min-width: 901px) {
+    .moments-header {
+      padding: 1.5rem;
+    }
+    
+    .moment-item {
+      padding: 2rem;
+    }
+    
+    .moment-images {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      max-width: none;
+      gap: 1rem;
+    }
+    
+    .moment-text {
+      font-size: 1.1rem;
+      line-height: 1.8;
+    }
+
+    .moment-title {
+      font-size: 1.25rem;
+      margin-bottom: 0.875rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .card-base {
+      margin: 0 -0.5rem;
+    }
+    
+    .moment-item {
+      border-radius: 8px;
+    }
+    
+    .moments-header {
+      border-radius: 6px;
+    }
+  }
+</style>

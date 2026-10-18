@@ -1,0 +1,206 @@
+/* Page transition animations with Swup - Enhanced version inspired by yukina */
+
+/* 主要内容区域的过渡动画 - 优化为更快的响应 */
+.transition-main {
+    transition: 
+        opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        transform 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 离开动画 - 内容向右上滑出并淡出 */
+.transition-leaving {
+    transition:
+        transform 200ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
+        opacity 200ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
+}
+
+html.is-changing .transition-main {
+    transition: 
+        opacity 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        transform 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+html.is-leaving .transition-main {
+    transition: 
+        opacity 200ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
+        transform 200ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
+}
+
+/* 进入动画 - 从右下角轻微滑入，模仿yukina效果 */
+html.is-animating .transition-main {
+    opacity: 0;
+    transform: translateY(1rem);
+}
+
+/* 离开动画 - 向左上角滑出 */
+html.is-animating.is-leaving .transition-leaving {
+    transform: translateY(-0.5rem);
+    opacity: 0;
+}
+
+/* Swup fade 动画 - 保持兼容性 */
+html.is-changing .transition-swup-fade {
+    transition: all 200ms ease-out;
+}
+
+html.is-animating .transition-swup-fade {
+    opacity: 0;
+    transform: translateY(1rem);
+}
+
+/* 增强的淡入动画 - 简化为纯垂直移动 */
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fade-out-down {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-0.5rem);
+    }
+}
+
+/* 页面加载动画 - 更快响应 */
+.onload-animation {
+    opacity: 0;
+    animation: fade-in-up 200ms ease-out forwards;
+}
+
+/*
+    Swup 导航时禁用首屏入场动画：Swup 的内容替换 + 客户端组件挂载会引发一次明显的闪动。
+    只保留“首次整页加载”的动画，Swup 往返不再让帖子卡片再次入场。
+*/
+html.mizuki-swup-nav .onload-animation {
+        opacity: 1 !important;
+        animation: none !important;
+}
+
+/* Home banner text often uses typewriter/transform animations; on Swup back-to-home it can look like it "rewinds". */
+html.mizuki-swup-nav .banner-text-overlay,
+html.mizuki-swup-nav .banner-title,
+html.mizuki-swup-nav .banner-subtitle {
+    animation: none !important;
+    transition: none !important;
+}
+
+.onload-animation-fade-in {
+    opacity: 0;
+    animation: fade-in 200ms ease-in forwards;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Small utility for subtle component mount reveal */
+.animate-fade-in {
+    opacity: 0;
+    animation: fade-in 180ms ease-out forwards;
+}
+
+/*
+    注意：不要用 nth-child 给 .onload-animation 做“分段延迟”。
+    导航栏（如 #navbar）内部结构会因客户端组件加载/字体替换等产生微小重排，
+    nth-child 延迟会把一个整体拆成多段出现，导致动画割裂与按钮错位。
+*/
+
+/* 只给导航栏整体一个统一的轻微延迟（可选） */
+#navbar.onload-animation {
+        animation-delay: 50ms;
+}
+
+/* 特殊元素的动画 */
+.transition-slide-in {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.transition-slide-in.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 卡片动画 */
+.card-animation {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+    transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.card-animation.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* 导航动画 */
+.nav-animation {
+    opacity: 0;
+    transform: translateX(-16px);
+    transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.nav-animation.loaded {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* 性能优化 - 使用will-change和GPU加速 */
+.transition-main,
+.transition-leaving,
+.onload-animation,
+.transition-slide-in,
+.card-animation {
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+    will-change: opacity, transform;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    html.is-animating .transition-main {
+        transform: translateY(0.75rem);
+    }
+    
+    html.is-animating.is-leaving .transition-leaving {
+        transform: translateY(-0.4rem);
+    }
+    
+    .transition-slide-in {
+        transform: translateY(12px);
+    }
+    
+    .card-animation {
+        transform: translateY(16px) scale(0.99);
+    }
+}
+
+/* 减少动画的用户偏好设置 */
+@media (prefers-reduced-motion: reduce) {
+    .transition-main,
+    .transition-leaving,
+    .onload-animation,
+    .transition-slide-in,
+    .card-animation,
+    .nav-animation {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

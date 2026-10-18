@@ -1,0 +1,9 @@
+---
+// 已合并到 /admin/ 管理台，此路由保留为永久重定向（兼容旧书签与 URL param 深链）
+// 注：astro check 会误报 target 未使用（Astro 语言插件会整体省略顶层 return Astro.redirect()
+// 的用量分析），构建产物正确，忽略该告警即可。
+const query = Astro.url.searchParams;
+const hasDeepLink = query.has("type") || query.has("slug") || query.has("filePath");
+const target = hasDeepLink ? `/admin/?view=edit&${query.toString()}` : "/admin/?view=edit";
+return Astro.redirect(target, 301);
+---

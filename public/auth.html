@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 认证说明 - Firef 博客内容管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <div class="mx-auto h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <i class="fas fa-key text-indigo-600 text-2xl"></i>
+                </div>
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                    GitHub 访问令牌设置
+                </h2>
+                <p class="mt-2 text-center text-sm text-gray-600">
+                    为内容管理器设置访问权限
+                </p>
+            </div>
+
+            <div class="mt-8 bg-white py-8 px-4 shadow rounded-lg sm:px-10">
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">如何创建 Personal Access Token</h3>
+                        <div class="text-sm text-gray-600 space-y-4">
+                            <p>1. 访问 GitHub 设置页面：</p>
+                            <a href="https://github.com/settings/tokens" target="_blank" class="text-indigo-600 hover:text-indigo-800 underline break-all">
+                                https://github.com/settings/tokens
+                            </a>
+                            
+                            <p>2. 点击 "Generate new token" 按钮</p>
+                            
+                            <p>3. 选择适当的权限：</p>
+                            <ul class="list-disc list-inside space-y-1 ml-4">
+                                <li><strong>repo</strong> - 完整的仓库权限（用于读写仓库内容）</li>
+                                <li><strong>workflow</strong> - 更新GitHub Actions工作流权限（如果需要）</li>
+                            </ul>
+                            
+                            <p>4. 生成令牌后，复制并保存好，因为之后将无法再次查看</p>
+                            
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm text-yellow-700">
+                                            <strong>安全提示：</strong>Personal Access Token 相当于密码，请妥善保管，
+                                            不要在不安全的环境中保存，不要分享给他人。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-6">
+                        <button id="goToEditor"
+                                class="w-full flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150">
+                            <i class="fas fa-edit mr-2"></i>
+                            进入内容编辑器
+                        </button>
+                        <button id="goToBlog"
+                                class="w-full flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition duration-150 mt-3">
+                            <i class="fas fa-home mr-2"></i>
+                            返回博客首页
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('goToEditor').addEventListener('click', function() {
+                window.location.href = '/my-editor/';
+            });
+
+            document.getElementById('goToBlog').addEventListener('click', function() {
+                window.location.href = '/';
+            });
+        });
+    </script>
+</body>
+</html>

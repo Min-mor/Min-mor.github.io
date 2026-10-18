@@ -1,0 +1,627 @@
+---
+import I18nKey from "../i18n/i18nKey";
+import { i18n } from "../i18n/translation";
+import MainGridLayout from "../layouts/MainGridLayout.astro";
+
+const title = "匿名树洞";
+const description = "把心事留在这里，没有人知道你是谁";
+---
+
+<MainGridLayout title={title} description={description}>
+  <div class="flex w-full rounded-[var(--radius-large)] overflow-hidden relative min-h-32">
+    <div class="card-base z-10 px-9 py-6 relative w-full">
+      <!-- 树洞标题 -->
+      <div class="flex flex-col items-start justify-center mb-8">
+        <h1 class="text-4xl font-bold text-black/90 dark:text-white/90 mb-2">
+          匿名树洞
+        </h1>
+        <p class="text-lg text-black/60 dark:text-white/60">
+          把心事留在这里，没有人知道你是谁
+        </p>
+      </div>
+
+      <!-- 匿名树洞功能 -->
+      <div class="space-y-8">
+        <!-- 树洞倾诉触发按钮 -->
+        <div class="input-trigger text-center">
+          <button
+            id="trigger-btn"
+            class="trigger-btn bg-gradient-to-r from-purple-500 to-pink-500 text-white border-none rounded-full px-8 py-4 font-medium cursor-pointer transition-all hover:opacity-90 shadow-lg"
+          >
+            🕳️ 向树洞倾诉
+          </button>
+        </div>
+
+        <!-- 树洞心事展示 -->
+        <div>
+          <div class="bg-white dark:bg-gray-800 rounded-lg border border-black/10 dark:border-white/10 p-6">
+            <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
+              <h2 class="text-2xl font-semibold text-black/90 dark:text-white/90">
+                匿名树洞
+              </h2>
+              <button
+                id="refresh-btn"
+                type="button"
+                onclick="location.reload();"
+                class="refresh-btn inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-purple-200/80 dark:border-purple-500/50 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-800/50 transition-colors shadow-sm"
+              >
+                <span class="text-base">🔄</span>
+                <span>刷新树洞</span>
+              </button>
+            </div>
+            <div id="messages-container" class="space-y-4">
+              <div class="text-center py-8 text-black/60 dark:text-white/60">
+                点击"刷新树洞"按钮开始加载心事...
+              </div>
+            </div>
+
+            <!-- 加载更多按钮 -->
+             <div id="load-more-btn-container" class="text-center mt-8 hidden">
+              <button
+                id="load-more-btn"
+                class="px-6 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-500 transition-all shadow-sm hover:shadow active:scale-95 text-sm font-medium"
+              >
+                看更多心事
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 覆盖式输入框 -->
+        <div id="overlay-input" class="overlay-input fixed inset-0 z-50 hidden">
+          <div class="overlay-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+          <div class="overlay-content relative bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md mx-4 max-h-[80vh] shadow-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+            <div class="overlay-header flex justify-between items-center pb-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 class="text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">向树洞倾诉</h3>
+              <button id="close-btn" class="close-btn text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">×</button>
+            </div>
+            <textarea
+              id="message-textarea"
+              placeholder="写下你的心事……没有人知道你是谁，树洞会替你保守秘密"
+              maxlength="200"
+              rows="6"
+              class="overlay-textarea w-full border border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-medium resize-y min-h-[150px] focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+            ></textarea>
+            <div class="overlay-actions flex justify-between items-center mt-4">
+              <span id="char-count" class="char-count text-sm text-gray-500 dark:text-gray-400">0/200</span>
+              <div class="action-buttons flex gap-3">
+                <button
+                  id="cancel-btn"
+                  class="cancel-btn border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg px-4 py-2 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  id="submit-btn"
+                  class="submit-btn-overlay bg-gradient-to-r from-purple-600 to-pink-600 text-white border-none rounded-lg px-5 py-2 font-medium cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                >
+                  🕳️ 投进树洞
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</MainGridLayout>
+
+<style>
+  .overlay-input.hidden {
+    display: none;
+  }
+
+  .overlay-input:not(.hidden) {
+    display: flex !important;
+    align-items: start !important;
+    justify-content: center !important;
+    padding-top: 10vh !important;
+  }
+
+  /* 匿名树洞卡片的额外样式 */
+  .message-card {
+    transition: all 0.3s ease;
+  }
+
+  .message-card {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .message-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #a855f7, #ec4899, #a855f7);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .message-card:hover::before {
+    opacity: 1;
+  }
+
+  .message-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .message-time-absolute {
+    margin-top: 1px;
+  }
+
+  .refresh-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .refresh-btn:focus-visible {
+    outline: 2px solid rgba(168, 85, 247, 0.5);
+    outline-offset: 2px;
+  }
+
+  /* 骨架屏动画 */
+  .animate-pulse {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .4; }
+  }
+</style>
+
+<script>
+  // 全局刷新按钮兜底逻辑
+  document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        refreshBtn.disabled = true;
+        refreshBtn.querySelector('span:last-child').textContent = '刷新中...';
+        window.location.reload();
+      });
+    }
+  });
+
+  // 客户端脚本用于处理匿名树洞功能
+  let guestbookInitContainer = null;
+  let guestbookForceReinit = false;
+
+  async function initializeGuestbook() {
+    // 检查当前页面是否为树洞页面
+    if (!window.location.pathname.includes('/treehole')) {
+      return;
+    }
+
+    // 获取基础 DOM
+    const messagesContainer = document.getElementById('messages-container');
+    if (!messagesContainer) {
+      console.error('消息容器不存在');
+      guestbookForceReinit = true;
+      guestbookInitContainer = null;
+      return;
+    }
+
+    const needFullInit = guestbookForceReinit || messagesContainer !== guestbookInitContainer;
+    if (!needFullInit) {
+      if (typeof window.loadMessagesFunc === 'function') {
+        await window.loadMessagesFunc();
+      }
+      return;
+    }
+
+    guestbookForceReinit = false;
+    guestbookInitContainer = messagesContainer;
+
+    // 检查Supabase配置
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('缺少Supabase环境变量');
+      const messagesContainer = document.getElementById('messages-container');
+      if (messagesContainer) {
+        messagesContainer.innerHTML = '<div class="text-center py-8 text-black/60 dark:text-white/60">树洞功能未配置（需要配置 Supabase，见 README）</div>';
+      }
+      return;
+    }
+
+    // 动态加载Supabase客户端
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  // 获取DOM元素
+    const triggerBtn = document.getElementById('trigger-btn');
+    const overlayInput = document.getElementById('overlay-input');
+    const closeBtn = document.getElementById('close-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const refreshBtn = document.getElementById('refresh-btn');
+  const submitBtn = document.getElementById('submit-btn');
+  const messageTextarea = document.getElementById('message-textarea');
+  const charCount = document.getElementById('char-count');
+
+    // 字符计数功能
+    messageTextarea.addEventListener('input', () => {
+      const length = messageTextarea.value.length;
+      charCount.textContent = `${length}/200`;
+    });
+
+    // 显示输入框
+    function showInput() {
+      overlayInput.classList.remove('hidden');
+      messageTextarea.focus();
+    }
+
+    // 隐藏输入框
+    function hideInput() {
+      overlayInput.classList.add('hidden');
+      messageTextarea.value = '';
+      charCount.textContent = '0/200';
+    }
+
+    // 生成IP哈希的函数
+    async function generateIpHash() {
+      try {
+        // 使用第三方服务获取 IP（可选）
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        const ip = data.ip;
+
+        // 哈希处理（不存储真实 IP）
+        const encoder = new TextEncoder();
+        const dataBuffer = encoder.encode(ip);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+      } catch {
+        // 备用方案：使用用户代理和时间的组合
+        return btoa(navigator.userAgent + Date.now()).substring(0, 16);
+      }
+    }
+
+    // ========== 防刷机制相关 ==========
+    // 本地存储上次心事时间的key
+    const LAST_POST_KEY = 'guestbook_last_post_time';
+
+    // 检查是否允许心事（每5分钟只能发一次）
+    function canPostMessage() {
+      const lastPost = localStorage.getItem(LAST_POST_KEY);
+      if (!lastPost) return true;
+      const now = Date.now();
+      return now - Number(lastPost) >= 5 * 60 * 1000; // 5分钟
+    }
+
+    // 设置本地心事时间
+    function setLastPostTime() {
+      localStorage.setItem(LAST_POST_KEY, Date.now().toString());
+    }
+
+    // 投递心事
+    async function submitMessage() {
+      const content = messageTextarea.value.trim();
+      if (!content) return;
+
+      // 防刷校验
+      if (!canPostMessage()) {
+        alert('每 5 分钟只能投递一次心事，请稍后再试。');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = '投递中...';
+
+      try {
+        const ipHash = await generateIpHash();
+        const messageData = {
+          content: content,
+          ip_hash: ipHash,
+          user_agent: navigator.userAgent
+        };
+
+        const { data, error } = await supabase
+          .from('messages')
+          .insert([messageData])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setLastPostTime(); // 记录本次心事时间
+
+        hideInput();
+        // 重新加载心事列表
+        await loadMessages();
+        alert('你的心事已经投进树洞 🕳️');
+      } catch (error) {
+        console.error('投递心事失败:', error);
+        alert('投递失败：' + error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🕳️ 投进树洞';
+      }
+    }
+
+    // ========== 骨架屏相关 ==========
+    // 骨架屏HTML
+    const skeletonHtml = Array(3).fill(`
+      <div class="message-card bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm animate-pulse">
+        <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
+        <div class="h-4 bg-gray-100 dark:bg-gray-800 rounded w-1/2 mb-2"></div>
+        <div class="h-3 bg-gray-100 dark:bg-gray-800 rounded w-1/3"></div>
+      </div>
+    `).join('');
+    
+    // 分页状态
+    let currentOffset = 0;
+    const PAGE_SIZE = 20; // 恢复默认显示数量20
+    const loadMoreContainer = document.getElementById('load-more-btn-container');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+
+    // 加载更多按钮点击事件
+    if (loadMoreBtn) {
+       loadMoreBtn.onclick = () => loadMessages(true);
+    }
+
+    // 重置分页状态（用于完全刷新或重新投递心事后的重置）
+    function resetPagination() {
+        currentOffset = 0;
+        if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+    }
+
+    // 加载树洞心事时显示骨架屏
+    async function loadMessages(isLoadMore = false) {
+      const messagesContainer = document.getElementById('messages-container');
+      
+      if (!isLoadMore) {
+         resetPagination();
+         if (messagesContainer) {
+            messagesContainer.innerHTML = skeletonHtml;
+         }
+      } else {
+         if (loadMoreBtn) {
+             loadMoreBtn.disabled = true;
+             loadMoreBtn.textContent = '加载中...';
+         }
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(currentOffset, currentOffset + PAGE_SIZE - 1); // 使用range分页
+
+        if (error) throw error;
+        
+        // 如果是首次加载且无数据
+        if (!isLoadMore && (!data || data.length === 0)) {
+           renderEmptyMessage();
+           return;
+        }
+
+        if (data && data.length > 0) {
+          renderMessages(data, isLoadMore);
+          currentOffset += data.length;
+          
+          // 判断是否还有更多数据
+          if (data.length < PAGE_SIZE) {
+             if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+          } else {
+             if (loadMoreContainer) loadMoreContainer.classList.remove('hidden');
+          }
+
+        } else if (isLoadMore) {
+           // 加载更多时发现没有更多数据了
+           if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+        }
+
+      } catch (error) {
+        console.error('获取心事失败:', error);
+        
+        if (!isLoadMore) {
+            guestbookForceReinit = true;
+            guestbookInitContainer = null;
+            if (messagesContainer) {
+              messagesContainer.innerHTML = '<div class="text-center py-8 text-black/60 dark:text-white/60">加载心事失败</div>';
+            }
+        } else {
+            alert('加载更多失败，请重试');
+        }
+      } finally {
+         if (isLoadMore && loadMoreBtn) {
+             loadMoreBtn.disabled = false;
+             loadMoreBtn.textContent = '看更多心事';
+         }
+      }
+    }
+
+    // 渲染心事列表
+    function renderMessages(messages, isAppend = false) {
+      if (!messages || messages.length === 0) {
+        if (!isAppend) renderEmptyMessage();
+        return;
+      }
+
+      const messagesHtml = messages.map(message => `
+        <div class="message-card bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <div class="message-content text-gray-700 dark:text-gray-300 mb-3">
+            ${message.content}
+          </div>
+          <div class="message-footer flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+            <div class="message-time-relative">${formatTime(message.created_at)}</div>
+            <div class="text-right">
+              <div class="message-id inline-block bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded text-xs mb-1">#${message.id.substring(0, 6)}</div>
+              <div class="message-time-absolute text-xs opacity-70">${formatAbsoluteTime(message.created_at)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      const messagesContainer = document.getElementById('messages-container');
+      if (messagesContainer) {
+        if (isAppend) {
+            messagesContainer.insertAdjacentHTML('beforeend', messagesHtml);
+        } else {
+            messagesContainer.innerHTML = messagesHtml;
+        }
+      }
+    }
+
+    // 渲染空状态
+    function renderEmptyMessage() {
+      const messagesContainer = document.getElementById('messages-container');
+      if (messagesContainer) {
+        messagesContainer.innerHTML = `
+          <div class="empty-state text-center py-12 text-gray-500 dark:text-gray-400">
+            <div class="empty-icon text-5xl mb-4">🔮</div>
+            <p class="text-xl font-medium mb-2">匿名树洞中还没有心事</p>
+            <p class="mb-4">成为第一个留下印记的人吧</p>
+            <div class="inline-block bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 px-6 py-3 rounded-lg">
+              <svg class="w-12 h-12 mx-auto text-purple-400 dark:text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+              </svg>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // 格式化时间显示
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+
+      // 1分钟内：刚刚
+      if (diff < 60 * 1000) {
+        return '刚刚';
+      }
+
+      // 1小时内：显示分钟
+      if (diff < 60 * 60 * 1000) {
+        const minutes = Math.floor(diff / (60 * 1000));
+        return `${minutes}分钟前`;
+      }
+
+      // 24小时内：显示小时
+      if (diff < 24 * 60 * 60 * 1000) {
+        const hours = Math.floor(diff / (60 * 60 * 1000));
+        return `${hours}小时前`;
+      }
+
+      // 超过24小时：显示天数
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      return `${days}天前`;
+    }
+
+    // 格式化绝对时间显示
+    function formatAbsoluteTime(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    }
+
+    // 事件监听器
+    if (triggerBtn) triggerBtn.addEventListener('click', showInput);
+    if (closeBtn) closeBtn.addEventListener('click', hideInput);
+    if (cancelBtn) cancelBtn.addEventListener('click', hideInput);
+    if (submitBtn) submitBtn.addEventListener('click', submitMessage);
+    if (refreshBtn) refreshBtn.addEventListener('click', () => {
+      refreshBtn.disabled = true;
+      refreshBtn.querySelector('span:last-child').textContent = '刷新中...';
+      window.location.reload();
+    });
+
+    // 点击背景关闭输入框
+    document.querySelector('.overlay-backdrop')?.addEventListener('click', hideInput);
+
+    // 将loadMessages函数暴露到全局，以便Swup事件可以调用
+    window.loadMessagesFunc = loadMessages;
+
+    // 初始化加载心事列表
+    // 使用 requestAnimationFrame 确保在浏览器重绘后执行，
+    // 这样可以避免在 Swup 过渡期间 DOM 状态不正确导致的问题
+    requestAnimationFrame(() => {
+        loadMessages();
+    });
+
+  }
+
+  // 检查文档是否已加载
+  // 增加对 popstate 事件的监听，处理浏览器后退按钮
+  const handleInitialLoad = () => {
+     if (window.location.pathname.includes('/treehole')) {
+        setTimeout(initializeGuestbook, 100);
+     }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', handleInitialLoad);
+  } else {
+    handleInitialLoad();
+  }
+  
+  window.addEventListener('popstate', handleInitialLoad);
+
+  function scheduleGuestbookInit(attempt = 0) {
+    if (!window.location.pathname.includes('/treehole')) return;
+    
+    // 强制重置初始化状态，确保Swup切换回来时能重新绑定
+    console.log(`Trying to init guestbook attempt: ${attempt}`);
+    guestbookForceReinit = true;
+    guestbookInitContainer = null;
+
+    const messagesContainer = document.getElementById('messages-container');
+    
+    // 如果找到了容器，执行初始化
+    if (messagesContainer) {
+      setTimeout(() => {
+        initializeGuestbook();
+      }, 50);
+      return;
+    }
+
+    // 重试机制
+    if (attempt >= 20) { // 增加重试次数
+      return;
+    }
+
+    setTimeout(() => scheduleGuestbookInit(attempt + 1), 100);
+  }
+
+  // 监听Swup页面切换事件
+  // 使用 content:replace 因为此时新内容已插入 DOM，但尚未显示
+  // 使用 page:view 确保页面已完全可见
+  
+  if (window.swup && window.swup.hooks) {
+    // 确保在内容替换后（即进入新页面）立即开始尝试寻找 DOM
+    window.swup.hooks.on('content:replace', () => {
+        console.log('Swup content:replace triggered');
+        scheduleGuestbookInit();
+    });
+    // 再次保障，在页面视图确认后检查
+    window.swup.hooks.on('page:view', () => {
+        console.log('Swup page:view triggered');
+        scheduleGuestbookInit();
+    });
+  } else {
+      // 兼容非 Swup 环境或者 Swup 未加载
+      document.addEventListener('swup:content:replace', scheduleGuestbookInit);
+      document.addEventListener('swup:page:view', scheduleGuestbookInit);
+  }
+
+
+  // 针对本项目自定义事件
+  document.addEventListener('mizuki:page:loaded', () => {
+     scheduleGuestbookInit();
+  });
+</script>

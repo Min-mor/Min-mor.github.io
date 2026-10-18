@@ -1,0 +1,8 @@
+---
+// 兼容旧引用：SideBar 仍然 import "./TOC.astro"
+// 这里直接复用上游 Mizuki 的最新 SidebarTOC 实现。
+
+import SidebarTOC from "../features/toc/SidebarTOC.astro";
+---
+
+<SidebarTOC {...Astro.props} />
